@@ -40,15 +40,14 @@ class EtelecomApiClient:
         hass: HomeAssistant,
         login: str,
         password: str,
-        user_id: str | None = None,
-        token: str | None = None,
+        auth_data: dict[str, str] | None = None,
     ) -> None:
         """Initialize the client."""
         self._session = async_get_clientsession(hass)
         self._login = login
         self._password = password
-        self._user_id = user_id
-        self._token = token
+        self._user_id = auth_data.get(CONF_USER_ID) if auth_data else None
+        self._token = auth_data.get(CONF_TOKEN) if auth_data else None
 
     @property
     def user_id(self) -> str | None:
