@@ -37,26 +37,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: EtelecomConfigEntry) -> 
         hass=hass,
         login=entry.data[CONF_LOGIN],
         password=entry.data[CONF_PASSWORD],
-        auth_data={
-            key: entry.data[key]
-            for key in (CONF_USER_ID, CONF_TOKEN)
-            if entry.data.get(key) is not None
-        }
-        or None,
+        user_id=entry.data.get(CONF_USER_ID),
+        token=entry.data.get(CONF_TOKEN),
     )
 
-    data_coordinator = EtelecomDataUpdateCoordinator(hass, client, entry)
+    coordinator = EtelecomDataUpdateCoordinator(hass, client, entry)
     try:
-        await data_coordinator.async_config_entry_first_refresh()
+        await coordinator.async_config_entry_first_refresh()
     except EtelecomAuthError as err:
         raise ConfigEntryAuthFailed(str(err)) from err
     except Exception as err:
         raise ConfigEntryNotReady(str(err)) from err
 
-    latest_account_id = str(data_coordinator.data.get(CONF_ACCOUNT_ID, "unknown"))
+    latest_account_id = str(coordinator.data.get(CONF_ACCOUNT_ID, "unknown"))
     hass.data[DOMAIN][entry.entry_id] = {
         "client": client,
-        "coordinator": data_coordinator,
+        "coordinator": coordinator,
         "account_id": latest_account_id,
     }
     entry.runtime_data = client
@@ -71,7 +67,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: EtelecomConfigEntry) -> 
         },
     )
 
-    _async_register_account_device(hass, entry, data_coordinator.data)
+    _async_register_account_device(hass, entry, coordinator.data)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

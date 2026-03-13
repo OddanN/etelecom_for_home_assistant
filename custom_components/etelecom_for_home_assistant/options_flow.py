@@ -27,26 +27,22 @@ class EtelecomOptionsFlow(OptionsFlow):
 
         return self.async_show_form(
             step_id="init",
-            data_schema=self.build_options_schema(),
-        )
-
-    def build_options_schema(self) -> vol.Schema:
-        """Build the options form schema."""
-        return vol.Schema(
-            {
-                vol.Required(
-                    CONF_SCAN_INTERVAL,
-                    default=self._config_entry.options.get(
-                        CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_HOURS
-                    ),
-                ): NumberSelector(
-                    NumberSelectorConfig(
-                        min=1,
-                        max=24,
-                        step=1,
-                        mode=NumberSelectorMode.BOX,
-                        unit_of_measurement="h",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_SCAN_INTERVAL,
+                        default=self._config_entry.options.get(
+                            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_HOURS
+                        ),
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=1,
+                            max=24,
+                            step=1,
+                            mode=NumberSelectorMode.BOX,
+                            unit_of_measurement="h",
+                        )
                     )
-                )
-            }
+                }
+            ),
         )
