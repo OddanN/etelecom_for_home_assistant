@@ -1,0 +1,8 @@
+# Version: 0.0.1
+[MASTER]
+ignore-patterns = __pycache__.*
+
+[MESSAGES CONTROL]
+
+[FORMAT]
+max-line-length = 120
