@@ -39,6 +39,15 @@ class EtelecomDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             update_interval=update_interval,
         )
 
+    async def async_refresh_data(self) -> dict[str, Any]:
+        """Refresh data and return the latest payload."""
+        await self.async_request_refresh()
+        return self.data
+
+    def get_latest_data(self) -> dict[str, Any]:
+        """Return the latest cached payload."""
+        return self.data
+
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch account data."""
         try:
