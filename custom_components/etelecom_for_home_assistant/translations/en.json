@@ -1,0 +1,58 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add Etelecom account",
+        "description": "Enter your Etelecom account credentials.",
+        "data": {
+          "login": "Login",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the Etelecom API.",
+      "invalid_auth": "Invalid login or password.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This account is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Integration settings",
+        "description": "Set the update interval.",
+        "data": {
+          "scan_interval": "Update interval"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "account_id": {
+        "name": "Account ID"
+      },
+      "bonus_balance": {
+        "name": "Bonus Balance"
+      },
+      "customer_name": {
+        "name": "Customer Name"
+      },
+      "cash_balance": {
+        "name": "Cash Balance"
+      },
+      "contract_address": {
+        "name": "Contract Address"
+      },
+      "next_charge_date": {
+        "name": "Next Charge Date"
+      },
+      "next_charge_amount": {
+        "name": "Next Charge Amount"
+      }
+    }
+  }
+}
