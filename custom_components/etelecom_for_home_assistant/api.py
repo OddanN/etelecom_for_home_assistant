@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -12,6 +13,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .const import API_BASE_URL, API_PATH, CONF_TOKEN, CONF_USER_ID
 
 _LOGGER = logging.getLogger(__name__)
+_SENSITIVE_KEYS = {"password", CONF_TOKEN}
 
 
 class EtelecomError(Exception):
@@ -61,7 +63,7 @@ class EtelecomApiClient:
     async def async_authenticate(self) -> dict[str, Any]:
         """Authenticate against the Etelecom API."""
         payload = await self._async_post(
-            query="login=null",
+            query="login",
             payload={"login": self._login, "password": self._password},
             request_name="login",
         )
@@ -82,7 +84,7 @@ class EtelecomApiClient:
 
         try:
             payload = await self._async_post(
-                query="get-user=null",
+                query="get-user",
                 payload={
                     CONF_USER_ID: self._user_id,
                     CONF_TOKEN: self._token,
@@ -92,7 +94,7 @@ class EtelecomApiClient:
         except EtelecomAuthError:
             await self.async_authenticate()
             payload = await self._async_post(
-                query="get-user=null",
+                query="get-user",
                 payload={
                     CONF_USER_ID: self._user_id,
                     CONF_TOKEN: self._token,
@@ -120,12 +122,28 @@ class EtelecomApiClient:
         """Perform a POST request with the minimum required headers."""
         url = f"{API_BASE_URL}{API_PATH}?{query}"
         headers = self._build_headers()
+        _LOGGER.debug(
+            "Etelecom request: method=POST url=%s headers=%s payload=%s",
+            url,
+            _mask_mapping(headers),
+            _mask_mapping(payload),
+        )
 
         try:
             async with self._session.post(url, headers=headers, json=payload) as response:
-                data = await response.json(content_type=None)
+                response_text = await response.text()
         except (aiohttp.ClientError, TimeoutError) as err:
             raise EtelecomConnectionError("Unable to connect to Etelecom") from err
+
+        _LOGGER.debug(
+            "Etelecom response: method=POST url=%s status=%s body=%s",
+            url,
+            response.status,
+            _mask_text(response_text),
+        )
+
+        try:
+            data = await response.json(content_type=None)
         except ValueError as err:
             raise EtelecomError("Invalid JSON response from Etelecom") from err
 
@@ -139,8 +157,8 @@ class EtelecomApiClient:
             _LOGGER.debug(
                 "Etelecom %s request failed, payload=%s, response=%s",
                 request_name,
-                {**payload, "password": "***"} if "password" in payload else payload,
-                data,
+                _mask_mapping(payload),
+                _mask_mapping(data),
             )
             raise EtelecomAuthError(f"{request_name} failed")
 
@@ -160,3 +178,29 @@ class EtelecomApiClient:
                 "Chrome/145.0.0.0 Safari/537.36"
             ),
         }
+
+
+def _mask_mapping(data: dict[str, Any]) -> dict[str, Any]:
+    """Mask sensitive values in logs."""
+    masked: dict[str, Any] = {}
+    for key, value in data.items():
+        if key in _SENSITIVE_KEYS and value is not None:
+            masked[key] = "***"
+            continue
+        if isinstance(value, dict):
+            masked[key] = _mask_mapping(value)
+            continue
+        masked[key] = value
+    return masked
+
+
+def _mask_text(text: str) -> str:
+    """Avoid leaking secrets in logged raw response bodies."""
+    try:
+        payload = json.loads(text)
+    except ValueError:
+        return text
+
+    if isinstance(payload, dict):
+        return json.dumps(_mask_mapping(payload), ensure_ascii=False)
+    return text

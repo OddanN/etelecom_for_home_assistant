@@ -12,13 +12,14 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CURRENCY_RUB
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_ACCOUNT_ID, CONF_USER_ID, DOMAIN
 from .coordinator import EtelecomDataUpdateCoordinator
+
+RUSSIAN_RUBLE = "RUB"
 
 
 class EtelecomSensorDescription(SensorEntityDescription):
@@ -45,7 +46,7 @@ SENSORS: tuple[EtelecomSensorDescription, ...] = (
         key="balance",
         translation_key="cash_balance",
         name="Cash Balance",
-        native_unit_of_measurement=CURRENCY_RUB,
+        native_unit_of_measurement=RUSSIAN_RUBLE,
     ),
     EtelecomSensorDescription(
         key="address",
@@ -62,7 +63,7 @@ SENSORS: tuple[EtelecomSensorDescription, ...] = (
         key="charge_sum",
         translation_key="next_charge_amount",
         name="Next Charge Amount",
-        native_unit_of_measurement=CURRENCY_RUB,
+        native_unit_of_measurement=RUSSIAN_RUBLE,
     ),
 )
 
@@ -123,7 +124,7 @@ class EtelecomSensor(CoordinatorEntity[EtelecomDataUpdateCoordinator], SensorEnt
         if self.entity_description.device_class == SensorDeviceClass.DATE:
             return date.fromisoformat(str(value))
 
-        if self.entity_description.native_unit_of_measurement == CURRENCY_RUB:
+        if self.entity_description.native_unit_of_measurement == RUSSIAN_RUBLE:
             try:
                 return Decimal(str(value))
             except (InvalidOperation, ValueError):
