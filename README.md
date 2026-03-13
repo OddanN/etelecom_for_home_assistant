@@ -1,7 +1,5 @@
 # Etelecom Integration for Home Assistant
 
-Version: `0.0.1`
-
 ![GitHub Release](https://img.shields.io/github/v/release/OddanN/etelecom_for_home_assistant?style=flat-square)
 ![GitHub Activity](https://img.shields.io/github/commit-activity/m/OddanN/etelecom_for_home_assistant?style=flat-square)
 ![GitHub Downloads](https://img.shields.io/github/downloads/OddanN/etelecom_for_home_assistant/total?style=flat-square)
