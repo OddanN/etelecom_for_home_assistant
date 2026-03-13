@@ -24,8 +24,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install pylint
-        run: python -m pip install --upgrade pip pylint
+      - name: Install pylint and lint dependencies
+        run: python -m pip install --upgrade pip pylint homeassistant aiohttp voluptuous
 
       - name: Run pylint
         env:
