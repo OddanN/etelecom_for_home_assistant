@@ -8,6 +8,10 @@ Version: `0.0.1`
 ![License](https://img.shields.io/github/license/OddanN/etelecom_for_home_assistant?style=flat-square)
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg?style=flat-square)](https://github.com/hacs/integration)
 
+<p align="center">
+  <img src="logo.png" alt="EIRC SPB logo" width="200">
+</p>
+
 The Etelecom Integration allows you to connect your Home Assistant instance to the Etelecom (AT-HOME / info-lan.ru)
 personal account API and create sensors with the main contract and balance information.
 
