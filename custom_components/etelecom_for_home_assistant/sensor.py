@@ -22,47 +22,36 @@ from .coordinator import EtelecomDataUpdateCoordinator
 RUSSIAN_RUBLE = "RUB"
 
 
-class EtelecomSensorDescription(SensorEntityDescription):
-    """Description of an Etelecom sensor."""
-
-
-SENSORS: tuple[EtelecomSensorDescription, ...] = (
-    EtelecomSensorDescription(
+SENSORS: tuple[SensorEntityDescription, ...] = (
+    SensorEntityDescription(
         key=CONF_ACCOUNT_ID,
         translation_key="account_id",
-        name="Account ID",
     ),
-    EtelecomSensorDescription(
+    SensorEntityDescription(
         key="homebonus.sum",
         translation_key="bonus_balance",
-        name="Bonus Balance",
     ),
-    EtelecomSensorDescription(
+    SensorEntityDescription(
         key="name",
         translation_key="customer_name",
-        name="Customer Name",
     ),
-    EtelecomSensorDescription(
+    SensorEntityDescription(
         key="balance",
         translation_key="cash_balance",
-        name="Cash Balance",
         native_unit_of_measurement=RUSSIAN_RUBLE,
     ),
-    EtelecomSensorDescription(
+    SensorEntityDescription(
         key="address",
         translation_key="contract_address",
-        name="Contract Address",
     ),
-    EtelecomSensorDescription(
+    SensorEntityDescription(
         key="next_pay_date",
         translation_key="next_charge_date",
-        name="Next Charge Date",
         device_class=SensorDeviceClass.DATE,
     ),
-    EtelecomSensorDescription(
+    SensorEntityDescription(
         key="charge_sum",
         translation_key="next_charge_amount",
-        name="Next Charge Amount",
         native_unit_of_measurement=RUSSIAN_RUBLE,
     ),
 )
@@ -89,17 +78,12 @@ class EtelecomSensor(CoordinatorEntity[EtelecomDataUpdateCoordinator], SensorEnt
         self,
         coordinator: EtelecomDataUpdateCoordinator,
         entry: ConfigEntry,
-        description: EtelecomSensorDescription,
+        description: SensorEntityDescription,
     ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._entry = entry
-        self.entity_description = description
-        self._attr_name = description.name
-        self._attr_translation_key = description.translation_key
+        self._description = description
         self._attr_unique_id = f"{entry.entry_id}_{description.key}"
-        self._attr_device_class = description.device_class
-        self._attr_native_unit_of_measurement = description.native_unit_of_measurement
 
         account_id = str(
             entry.data.get(CONF_ACCOUNT_ID) or coordinator.data.get(CONF_ACCOUNT_ID) or "unknown"
@@ -115,16 +99,31 @@ class EtelecomSensor(CoordinatorEntity[EtelecomDataUpdateCoordinator], SensorEnt
         )
 
     @property
+    def translation_key(self) -> str | None:
+        """Return the translation key for the entity."""
+        return self._description.translation_key
+
+    @property
+    def device_class(self) -> SensorDeviceClass | str | None:
+        """Return the device class of the sensor."""
+        return self._description.device_class
+
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        """Return the native unit of measurement."""
+        return self._description.native_unit_of_measurement
+
+    @property
     def native_value(self) -> Any:
         """Return the current sensor value."""
-        value = _extract_value(self.coordinator.data, self.entity_description.key)
+        value = _extract_value(self.coordinator.data, self._description.key)
         if value is None:
             return None
 
-        if self.entity_description.device_class == SensorDeviceClass.DATE:
+        if self._description.device_class == SensorDeviceClass.DATE:
             return date.fromisoformat(str(value))
 
-        if self.entity_description.native_unit_of_measurement == RUSSIAN_RUBLE:
+        if self._description.native_unit_of_measurement == RUSSIAN_RUBLE:
             try:
                 return Decimal(str(value))
             except (InvalidOperation, ValueError):
@@ -135,7 +134,7 @@ class EtelecomSensor(CoordinatorEntity[EtelecomDataUpdateCoordinator], SensorEnt
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
         """Return extra state attributes."""
-        if self.entity_description.key != "homebonus.sum":
+        if self._description.key != "homebonus.sum":
             return None
         homebonus = self.coordinator.data.get("homebonus")
         if not isinstance(homebonus, dict):
