@@ -9,7 +9,9 @@ from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResu
 from homeassistant.helpers.selector import NumberSelector, NumberSelectorConfig, NumberSelectorMode
 
 from .api import EtelecomApiClient, EtelecomAuthError, EtelecomConnectionError, EtelecomError
-from .const import CONF_ACCOUNT_ID, CONF_LOGIN, CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_TOKEN, CONF_USER_ID, DEFAULT_SCAN_INTERVAL_HOURS, DOMAIN
+from .const import CONF_ACCOUNT_ID, CONF_LOGIN, CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_TOKEN, CONF_USER_ID, \
+    DEFAULT_SCAN_INTERVAL_HOURS, DOMAIN
+from .formatting import format_account_title
 from .options_flow import EtelecomOptionsFlow
 
 
@@ -46,7 +48,7 @@ class EtelecomConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors['base'] = 'unknown'
             else:
                 account_id = str(data.get(CONF_ACCOUNT_ID, ''))
-                self._title = data.get('name') or f"Etelecom {login}"
+                self._title = format_account_title(data, fallback=f"Etelecom {login}")
                 self._entry_data = {
                     CONF_LOGIN: login,
                     CONF_PASSWORD: password,
