@@ -8,6 +8,13 @@
           "login": "Login",
           "password": "Password"
         }
+      },
+      "settings": {
+        "title": "Integration settings",
+        "description": "Set the update interval.",
+        "data": {
+          "scan_interval": "Update interval"
+        }
       }
     },
     "error": {
