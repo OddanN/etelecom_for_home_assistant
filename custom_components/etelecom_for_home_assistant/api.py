@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import dataclass
 from datetime import datetime, time
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -33,6 +34,15 @@ class EtelecomConnectionError(EtelecomError):
 
 class EtelecomResponseError(EtelecomError):
     """Raised when the API returned an unexpected payload."""
+
+
+@dataclass(slots=True)
+class PostRequestOptions:
+    """Options that control how a POST request is processed."""
+
+    request_name: str
+    fail_on_unsuccessful: bool = True
+    content_type: str = "application/json"
 
 
 class EtelecomApiClient:
@@ -67,7 +77,7 @@ class EtelecomApiClient:
         payload = await self._async_post(
             query="login",
             payload={"login": self._login, "password": self._password},
-            request_name="login",
+            options=PostRequestOptions(request_name="login"),
         )
 
         token = payload.get(CONF_TOKEN)
@@ -91,7 +101,7 @@ class EtelecomApiClient:
                     CONF_USER_ID: self._user_id,
                     CONF_TOKEN: self._token,
                 },
-                request_name="get-user",
+                options=PostRequestOptions(request_name="get-user"),
             )
         except EtelecomAuthError:
             await self.async_authenticate()
@@ -101,7 +111,7 @@ class EtelecomApiClient:
                     CONF_USER_ID: self._user_id,
                     CONF_TOKEN: self._token,
                 },
-                request_name="get-user",
+                options=PostRequestOptions(request_name="get-user"),
             )
 
         token = payload.get(CONF_TOKEN)
@@ -131,9 +141,11 @@ class EtelecomApiClient:
                     CONF_USER_ID: self._user_id,
                     CONF_TOKEN: self._token,
                 },
-                request_name="tariff-data",
-                fail_on_unsuccessful=False,
-                content_type="application/x-www-form-urlencoded",
+                options=PostRequestOptions(
+                    request_name="tariff-data",
+                    fail_on_unsuccessful=False,
+                    content_type="application/x-www-form-urlencoded",
+                ),
             )
         except EtelecomAuthError:
             await self.async_authenticate()
@@ -143,9 +155,11 @@ class EtelecomApiClient:
                     CONF_USER_ID: self._user_id,
                     CONF_TOKEN: self._token,
                 },
-                request_name="tariff-data",
-                fail_on_unsuccessful=False,
-                content_type="application/x-www-form-urlencoded",
+                options=PostRequestOptions(
+                    request_name="tariff-data",
+                    fail_on_unsuccessful=False,
+                    content_type="application/x-www-form-urlencoded",
+                ),
             )
 
     async def async_get_current_abonement(self) -> dict[str, Any]:
@@ -160,9 +174,11 @@ class EtelecomApiClient:
                     CONF_USER_ID: self._user_id,
                     CONF_TOKEN: self._token,
                 },
-                request_name="abonement/current",
-                fail_on_unsuccessful=False,
-                content_type="application/x-www-form-urlencoded",
+                options=PostRequestOptions(
+                    request_name="abonement/current",
+                    fail_on_unsuccessful=False,
+                    content_type="application/x-www-form-urlencoded",
+                ),
             )
         except EtelecomAuthError:
             await self.async_authenticate()
@@ -172,9 +188,11 @@ class EtelecomApiClient:
                     CONF_USER_ID: self._user_id,
                     CONF_TOKEN: self._token,
                 },
-                request_name="abonement/current",
-                fail_on_unsuccessful=False,
-                content_type="application/x-www-form-urlencoded",
+                options=PostRequestOptions(
+                    request_name="abonement/current",
+                    fail_on_unsuccessful=False,
+                    content_type="application/x-www-form-urlencoded",
+                ),
             )
 
     async def async_get_network_connect_info(self) -> dict[str, Any]:
@@ -189,9 +207,11 @@ class EtelecomApiClient:
                     CONF_USER_ID: self._user_id,
                     CONF_TOKEN: self._token,
                 },
-                request_name="network-settings/connect_info",
-                fail_on_unsuccessful=False,
-                content_type="application/x-www-form-urlencoded",
+                options=PostRequestOptions(
+                    request_name="network-settings/connect_info",
+                    fail_on_unsuccessful=False,
+                    content_type="application/x-www-form-urlencoded",
+                ),
             )
         except EtelecomAuthError:
             await self.async_authenticate()
@@ -201,9 +221,11 @@ class EtelecomApiClient:
                     CONF_USER_ID: self._user_id,
                     CONF_TOKEN: self._token,
                 },
-                request_name="network-settings/connect_info",
-                fail_on_unsuccessful=False,
-                content_type="application/x-www-form-urlencoded",
+                options=PostRequestOptions(
+                    request_name="network-settings/connect_info",
+                    fail_on_unsuccessful=False,
+                    content_type="application/x-www-form-urlencoded",
+                ),
             )
 
     async def async_get_payment_history(self, create_date: Any) -> dict[str, Any]:
@@ -224,9 +246,11 @@ class EtelecomApiClient:
             result = await self._async_post(
                 query="payment/history",
                 payload=payload,
-                request_name="payment/history",
-                fail_on_unsuccessful=False,
-                content_type="application/x-www-form-urlencoded",
+                options=PostRequestOptions(
+                    request_name="payment/history",
+                    fail_on_unsuccessful=False,
+                    content_type="application/x-www-form-urlencoded",
+                ),
             )
         except EtelecomAuthError:
             await self.async_authenticate()
@@ -235,9 +259,11 @@ class EtelecomApiClient:
             result = await self._async_post(
                 query="payment/history",
                 payload=payload,
-                request_name="payment/history",
-                fail_on_unsuccessful=False,
-                content_type="application/x-www-form-urlencoded",
+                options=PostRequestOptions(
+                    request_name="payment/history",
+                    fail_on_unsuccessful=False,
+                    content_type="application/x-www-form-urlencoded",
+                ),
             )
         result["date_from"] = date_from
         result["date_to"] = date_to
@@ -262,9 +288,11 @@ class EtelecomApiClient:
             result = await self._async_post(
                 query="homebonus/details",
                 payload=payload,
-                request_name="homebonus/details",
-                fail_on_unsuccessful=False,
-                content_type="application/x-www-form-urlencoded",
+                options=PostRequestOptions(
+                    request_name="homebonus/details",
+                    fail_on_unsuccessful=False,
+                    content_type="application/x-www-form-urlencoded",
+                ),
             )
         except EtelecomAuthError:
             await self.async_authenticate()
@@ -273,9 +301,11 @@ class EtelecomApiClient:
             result = await self._async_post(
                 query="homebonus/details",
                 payload=payload,
-                request_name="homebonus/details",
-                fail_on_unsuccessful=False,
-                content_type="application/x-www-form-urlencoded",
+                options=PostRequestOptions(
+                    request_name="homebonus/details",
+                    fail_on_unsuccessful=False,
+                    content_type="application/x-www-form-urlencoded",
+                ),
             )
         result["from_str"] = from_str
         result["to_str"] = to_str
@@ -287,13 +317,11 @@ class EtelecomApiClient:
         *,
         query: str,
         payload: dict[str, Any],
-        request_name: str,
-            fail_on_unsuccessful: bool = True,
-            content_type: str = "application/json",
+            options: PostRequestOptions,
     ) -> dict[str, Any]:
         """Perform a POST request with the minimum required headers."""
         url = f"{API_BASE_URL}{API_PATH}?{query}"
-        headers = self._build_headers(content_type)
+        headers = self._build_headers(options.content_type)
         _LOGGER.debug(
             "Etelecom request: method=POST url=%s headers=%s payload=%s",
             url,
@@ -303,7 +331,7 @@ class EtelecomApiClient:
 
         try:
             request_kwargs: dict[str, Any] = {"headers": headers}
-            if content_type == "application/json":
+            if options.content_type == "application/json":
                 request_kwargs["json"] = payload
             else:
                 request_kwargs["data"] = json.dumps(payload)
@@ -331,14 +359,14 @@ class EtelecomApiClient:
         if response.status >= 400:
             raise EtelecomError(f"Unexpected API response: {response.status}")
 
-        if fail_on_unsuccessful and not data.get("success"):
+        if options.fail_on_unsuccessful and not data.get("success"):
             _LOGGER.debug(
                 "Etelecom %s request failed, payload=%s, response=%s",
-                request_name,
+                options.request_name,
                 _mask_mapping(payload),
                 _mask_mapping(data),
             )
-            raise EtelecomAuthError(f"{request_name} failed")
+            raise EtelecomAuthError(f"{options.request_name} failed")
 
         return data
 

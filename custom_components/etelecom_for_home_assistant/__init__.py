@@ -18,18 +18,25 @@ PLATFORMS = ["sensor", "number", "button"]
 
 
 async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
+    """Set up the Etelecom integration."""
     hass.data.setdefault(DOMAIN, {})
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: EtelecomConfigEntry) -> bool:
+    """Set up Etelecom from a config entry."""
     hass.data.setdefault(DOMAIN, {})
 
     client = EtelecomApiClient(
         hass=hass,
         login=entry.data[CONF_LOGIN],
         password=entry.data[CONF_PASSWORD],
-        auth_data={key: entry.data[key] for key in (CONF_USER_ID, CONF_TOKEN) if entry.data.get(key) is not None} or None,
+        auth_data={
+                      key: entry.data[key]
+                      for key in (CONF_USER_ID, CONF_TOKEN)
+                      if entry.data.get(key) is not None
+                  }
+                  or None,
     )
 
     data_coordinator = EtelecomDataUpdateCoordinator(hass, client, entry)
@@ -67,6 +74,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: EtelecomConfigEntry) -> 
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload an Etelecom config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if not unload_ok:
         return False
@@ -75,10 +83,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Handle config entry updates."""
     await hass.config_entries.async_reload(entry.entry_id)
 
 
 def _async_register_account_device(hass: HomeAssistant, entry: ConfigEntry, payload: dict) -> None:
+    """Register the account device in the device registry."""
     device_registry = dr.async_get(hass)
     account_id = str(payload.get(CONF_ACCOUNT_ID, 'unknown'))
     user_id = entry.data.get(CONF_USER_ID) or payload.get(CONF_USER_ID) or 'unknown'

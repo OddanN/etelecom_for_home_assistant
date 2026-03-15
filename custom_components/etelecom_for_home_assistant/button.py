@@ -2,24 +2,28 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_ACCOUNT_ID, CONF_LOGIN, CONF_USER_ID, DOMAIN
-from .formatting import format_device_name, format_device_slug
+from .const import CONF_ACCOUNT_ID, CONF_LOGIN, DOMAIN
+from .formatting import build_device_info, format_device_slug
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
+    """Set up the refresh button from a config entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]['coordinator']
     async_add_entities([EtelecomRefreshButton(entry, coordinator)])
 
 
 class EtelecomRefreshButton(CoordinatorEntity, ButtonEntity):
+    """Button entity that triggers an immediate coordinator refresh."""
+
     _attr_translation_key = 'refresh'
     _attr_icon = 'mdi:refresh'
     _attr_entity_category = EntityCategory.CONFIG
@@ -28,18 +32,22 @@ class EtelecomRefreshButton(CoordinatorEntity, ButtonEntity):
     def __init__(self, entry: ConfigEntry, coordinator) -> None:
         CoordinatorEntity.__init__(self, coordinator)
         ButtonEntity.__init__(self)
-        account_id = str(entry.data.get(CONF_ACCOUNT_ID) or coordinator.data.get(CONF_ACCOUNT_ID) or 'unknown')
-        user_id = str(entry.data.get(CONF_USER_ID) or coordinator.data.get(CONF_USER_ID) or 'unknown')
+        account_id = str(entry.data.get(CONF_ACCOUNT_ID) or coordinator.data.get(CONF_ACCOUNT_ID) or "unknown")
         self._attr_unique_id = f"{entry.entry_id}_{account_id}_refresh"
         self._attr_suggested_object_id = (
             f"{format_device_slug(entry.data.get(CONF_LOGIN), fallback='etelecom')}_refresh"
         )
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"account_{user_id}_{account_id}")},
-            manufacturer='Etelecom',
-            model='Personal Account',
-            name=format_device_name(entry.data.get(CONF_LOGIN), fallback='ETelecom'),
-        )
+        self._attr_device_info = build_device_info(entry.data, coordinator.data)
 
     async def async_press(self) -> None:
+        """Refresh coordinator data when the button is pressed."""
         await self.coordinator.async_refresh()
+
+    def press(self) -> None:
+        """Refresh coordinator data when Home Assistant calls the sync API."""
+        future = asyncio.run_coroutine_threadsafe(self.coordinator.async_refresh(), self.hass.loop)
+        future.result()
+
+    async def async_update(self) -> None:
+        """Refresh the coordinator when Home Assistant updates the entity."""
+        await self.coordinator.async_request_refresh()

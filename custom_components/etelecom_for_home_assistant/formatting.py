@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.selector import NumberSelector, NumberSelectorConfig, NumberSelectorMode
 from homeassistant.util import slugify
+
+from .const import CONF_ACCOUNT_ID, CONF_LOGIN, CONF_USER_ID, DOMAIN
 
 
 def format_account_title(payload: dict[str, Any], fallback: str = "Etelecom") -> str:
@@ -34,6 +39,31 @@ def format_device_slug(login: str | None, fallback: str = "etelecom") -> str:
     if not normalized_login:
         return fallback
     return slugify(f"etelecom_{normalized_login}", separator="_")
+
+
+def build_device_info(entry_data: Mapping[str, Any], coordinator_data: Mapping[str, Any]) -> DeviceInfo:
+    """Build common device info for integration entities."""
+    account_id = str(entry_data.get(CONF_ACCOUNT_ID) or coordinator_data.get(CONF_ACCOUNT_ID) or "unknown")
+    user_id = str(entry_data.get(CONF_USER_ID) or coordinator_data.get(CONF_USER_ID) or "unknown")
+    return DeviceInfo(
+        identifiers={(DOMAIN, f"account_{user_id}_{account_id}")},
+        manufacturer="Etelecom",
+        model="Personal Account",
+        name=format_device_name(entry_data.get(CONF_LOGIN), fallback="ETelecom"),
+    )
+
+
+def build_scan_interval_selector() -> NumberSelector:
+    """Build the shared scan interval selector for flows."""
+    return NumberSelector(
+        NumberSelectorConfig(
+            min=1,
+            max=24,
+            step=1,
+            mode=NumberSelectorMode.BOX,
+            unit_of_measurement="h",
+        )
+    )
 
 
 def _shorten_name(name: str) -> str:

@@ -4,13 +4,9 @@ from __future__ import annotations
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, OptionsFlow
-from homeassistant.helpers.selector import (
-    NumberSelector,
-    NumberSelectorConfig,
-    NumberSelectorMode,
-)
 
 from .const import CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_HOURS
+from .formatting import build_scan_interval_selector
 
 
 class EtelecomOptionsFlow(OptionsFlow):
@@ -39,14 +35,6 @@ class EtelecomOptionsFlow(OptionsFlow):
                     default=self._config_entry.options.get(
                         CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_HOURS
                     ),
-                ): NumberSelector(
-                    NumberSelectorConfig(
-                        min=1,
-                        max=24,
-                        step=1,
-                        mode=NumberSelectorMode.BOX,
-                        unit_of_measurement="h",
-                    )
-                )
+                ): build_scan_interval_selector()
             }
         )

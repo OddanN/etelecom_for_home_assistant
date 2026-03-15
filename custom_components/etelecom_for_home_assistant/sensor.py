@@ -13,13 +13,12 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_ACCOUNT_ID, CONF_LOGIN, CONF_USER_ID, DOMAIN
+from .const import CONF_ACCOUNT_ID, CONF_LOGIN, DOMAIN
 from .coordinator import EtelecomDataUpdateCoordinator
-from .formatting import format_device_name, format_device_slug
+from .formatting import build_device_info, format_device_slug
 
 RUSSIAN_RUBLE = "\u20bd"
 BONUS_UNIT = "\u0431."
@@ -32,7 +31,9 @@ ACTIVE_UNTIL_PREFIX = (
 )
 ACTIVE_ABONEMENT_FALLBACK = "\u0414\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442"
 TARIFF_CHANGE_PLANNED = "\u0417\u0430\u043f\u043b\u0430\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u043e"
-TARIFF_CHANGE_NOT_PLANNED = "\u041d\u0435 \u0437\u0430\u043f\u043b\u0430\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u043e"
+TARIFF_CHANGE_NOT_PLANNED = (
+    "\u041d\u0435 \u0437\u0430\u043f\u043b\u0430\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u043e"
+)
 MBPS_SUFFIX = "\u041c\u0431\u0438\u0442/\u0441"
 PAYMENTS_URL = "https://my.etelecom.ru/"
 BONUS_URL = "https://my.etelecom.ru/bonus"
@@ -145,18 +146,7 @@ class EtelecomSensor(CoordinatorEntity[EtelecomDataUpdateCoordinator], SensorEnt
         if description.key == "last_update":
             self._attr_entity_registry_enabled_default = False
 
-        account_id = str(
-            entry.data.get(CONF_ACCOUNT_ID) or coordinator.data.get(CONF_ACCOUNT_ID) or "unknown"
-        )
-        user_id = str(
-            entry.data.get(CONF_USER_ID) or coordinator.data.get(CONF_USER_ID) or "unknown"
-        )
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"account_{user_id}_{account_id}")},
-            manufacturer="Etelecom",
-            model="Personal Account",
-            name=format_device_name(entry.data.get(CONF_LOGIN), fallback="ETelecom"),
-        )
+        self._attr_device_info = build_device_info(entry.data, coordinator.data)
 
     @property
     def translation_key(self) -> str | None:
@@ -197,92 +187,16 @@ class EtelecomSensor(CoordinatorEntity[EtelecomDataUpdateCoordinator], SensorEnt
     @property
     def native_value(self) -> Any:
         """Return the current sensor value."""
-        if self._description.key == "last_update":
-            return self.coordinator.last_successful_update
-
-        value = _extract_value(self.coordinator.data, self._description.key)
-        if value is None:
-            return None
-
-        if self._description.device_class == SensorDeviceClass.DATE:
-            return date.fromisoformat(str(value))
-
-        if self._description.key == "tariff_speed":
-            return _format_tariff_speed(value)
-
-        if self._description.key == "abonement_current":
-            return _format_abonement_state(value)
-
-        if self._description.key == "tariff_change":
-            return _format_tariff_change_state(value, self.coordinator.data)
-
-        if self._description.key == "active_services":
-            return _count_active_services(value)
-
-        if self._description.key in {"network_connect_info.local_ip", "network_connect_info.external_ip"}:
-            return _extract_ip_value(value)
-
-        if self._description.native_unit_of_measurement == RUSSIAN_RUBLE:
-            try:
-                return Decimal(str(value))
-            except (InvalidOperation, ValueError):
-                return None
-
-        return value
+        return _build_native_value(
+            self._description,
+            self.coordinator.data,
+            self.coordinator.last_successful_update,
+        )
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
         """Return extra state attributes."""
-        if self._description.key == "homebonus.sum":
-            return _extract_bonus_attributes(
-                self.coordinator.data.get("homebonus"),
-                self.coordinator.data.get("homebonus_details"),
-                self.coordinator.data.get("create_date"),
-            )
-
-        if self._description.key == "balance":
-            payment_attributes = _extract_payment_history_attributes(
-                self.coordinator.data.get("payment_history"),
-            )
-            return payment_attributes or None
-
-        if self._description.key == "tariff_speed":
-            return _extract_current_tariff_attributes(
-                self.coordinator.data,
-                self.coordinator.data.get("tariff_data_response"),
-            )
-
-        if self._description.key == "abonement_current":
-            return _format_abonement_attributes(self.coordinator.data.get("abonement_current"))
-
-        if self._description.key == "charge_sum":
-            next_pay_date = self.coordinator.data.get("next_pay_date")
-            if next_pay_date in (None, ""):
-                return None
-            return {"next_charge_date": next_pay_date}
-
-        if self._description.key == "network_connect_info.local_ip":
-            return _extract_ip_attributes(self.coordinator.data.get("network_connect_info"), external=False)
-
-        if self._description.key == "network_connect_info.external_ip":
-            return _extract_ip_attributes(
-                self.coordinator.data.get("network_connect_info"),
-                external=True,
-                tariff_payload=self.coordinator.data.get("tariff_data_response"),
-            )
-
-        if self._description.key == "tariff_change":
-            return _extract_tariff_change_attributes(
-                self.coordinator.data.get("tariff_data_response"),
-                self.coordinator.data,
-            )
-
-        if self._description.key == "active_services":
-            return _extract_active_services_attributes(
-                self.coordinator.data.get("tariff_data_response"),
-            )
-
-        return None
+        return _build_extra_state_attributes(self._description.key, self.coordinator.data)
 
 
 def _extract_value(payload: dict[str, Any], key: str) -> Any:
@@ -300,6 +214,100 @@ def _extract_value(payload: dict[str, Any], key: str) -> Any:
             return None
         value = value.get(part)
     return value
+
+
+def _build_native_value(
+        description: SensorEntityDescription,
+        payload: dict[str, Any],
+        last_successful_update: datetime | None,
+) -> Any:
+    """Build the sensor native value from coordinator payload."""
+    if description.key == "last_update":
+        return last_successful_update
+
+    value = _extract_value(payload, description.key)
+    if value is None:
+        return None
+
+    if description.device_class == SensorDeviceClass.DATE:
+        return date.fromisoformat(str(value))
+
+    formatter = _NATIVE_VALUE_FORMATTERS.get(description.key)
+    if formatter is not None:
+        return formatter(value, payload)
+
+    if description.native_unit_of_measurement == RUSSIAN_RUBLE:
+        return _to_decimal(value)
+
+    return value
+
+
+def _build_extra_state_attributes(sensor_key: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Build sensor attributes from coordinator payload."""
+    builder = _EXTRA_ATTRIBUTE_BUILDERS.get(sensor_key)
+    if builder is None:
+        return None
+    return builder(payload)
+
+
+def _build_bonus_attributes(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Build bonus sensor attributes."""
+    return _extract_bonus_attributes(
+        payload.get("homebonus"),
+        payload.get("homebonus_details"),
+        payload.get("create_date"),
+    )
+
+
+def _build_balance_attributes(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Build money balance sensor attributes."""
+    payment_attributes = _extract_payment_history_attributes(payload.get("payment_history"))
+    return payment_attributes or None
+
+
+def _build_current_tariff_attributes(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Build current tariff sensor attributes."""
+    return _extract_current_tariff_attributes(payload, payload.get("tariff_data_response"))
+
+
+def _build_next_charge_attributes(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Build next charge sensor attributes."""
+    next_pay_date = payload.get("next_pay_date")
+    if next_pay_date in (None, ""):
+        return None
+    return {"next_charge_date": next_pay_date}
+
+
+def _build_local_ip_attributes(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Build local IP sensor attributes."""
+    return _extract_ip_attributes(payload.get("network_connect_info"), external=False)
+
+
+def _build_external_ip_attributes(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Build external IP sensor attributes."""
+    return _extract_ip_attributes(
+        payload.get("network_connect_info"),
+        external=True,
+        tariff_payload=payload.get("tariff_data_response"),
+    )
+
+
+def _build_tariff_change_attributes(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Build tariff change sensor attributes."""
+    return _extract_tariff_change_attributes(payload.get("tariff_data_response"), payload)
+
+
+def _build_active_services_attributes(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Build active services sensor attributes."""
+    return _extract_active_services_attributes(payload.get("tariff_data_response"))
+
+
+def _to_decimal(value: Any) -> Decimal | None:
+    """Convert a value to decimal for currency sensors."""
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return None
 
 
 def _format_tariff_speed(value: Any) -> str | None:
@@ -627,3 +635,25 @@ def _format_unix_datetime(value: Any) -> str | None:
     except (TypeError, ValueError):
         return None
     return datetime.fromtimestamp(timestamp).strftime("%d.%m.%Y %H:%M:%S")
+
+
+_NATIVE_VALUE_FORMATTERS: dict[str, Any] = {
+    "tariff_speed": lambda value, _payload: _format_tariff_speed(value),
+    "abonement_current": lambda value, _payload: _format_abonement_state(value),
+    "tariff_change": _format_tariff_change_state,
+    "active_services": lambda value, _payload: _count_active_services(value),
+    "network_connect_info.local_ip": lambda value, _payload: _extract_ip_value(value),
+    "network_connect_info.external_ip": lambda value, _payload: _extract_ip_value(value),
+}
+
+_EXTRA_ATTRIBUTE_BUILDERS: dict[str, Any] = {
+    "homebonus.sum": _build_bonus_attributes,
+    "balance": _build_balance_attributes,
+    "tariff_speed": _build_current_tariff_attributes,
+    "abonement_current": lambda payload: _format_abonement_attributes(payload.get("abonement_current")),
+    "charge_sum": _build_next_charge_attributes,
+    "network_connect_info.local_ip": _build_local_ip_attributes,
+    "network_connect_info.external_ip": _build_external_ip_attributes,
+    "tariff_change": _build_tariff_change_attributes,
+    "active_services": _build_active_services_attributes,
+}

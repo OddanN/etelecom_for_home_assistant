@@ -6,12 +6,11 @@ from typing import Any
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.helpers.selector import NumberSelector, NumberSelectorConfig, NumberSelectorMode
 
 from .api import EtelecomApiClient, EtelecomAuthError, EtelecomConnectionError, EtelecomError
 from .const import CONF_ACCOUNT_ID, CONF_LOGIN, CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_TOKEN, CONF_USER_ID, \
     DEFAULT_SCAN_INTERVAL_HOURS, DOMAIN
-from .formatting import format_account_title
+from .formatting import build_scan_interval_selector, format_account_title
 from .options_flow import EtelecomOptionsFlow
 
 
@@ -26,9 +25,11 @@ class EtelecomConfigFlow(ConfigFlow, domain=DOMAIN):
         self._title: str | None = None
 
     def is_matching(self, _other_flow: ConfigFlow) -> bool:
+        """Disable flow matching to always allow a new attempt."""
         return False
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Handle the initial user step."""
         errors: dict[str, str] = {}
         if user_input is not None:
             login = user_input[CONF_LOGIN].strip()
@@ -68,6 +69,7 @@ class EtelecomConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_settings(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Handle the settings step."""
         if self._entry_data is None:
             return self.async_abort(reason='unknown')
 
@@ -84,18 +86,11 @@ class EtelecomConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(
                     CONF_SCAN_INTERVAL,
                     default=DEFAULT_SCAN_INTERVAL_HOURS,
-                ): NumberSelector(
-                    NumberSelectorConfig(
-                        min=1,
-                        max=24,
-                        step=1,
-                        mode=NumberSelectorMode.BOX,
-                        unit_of_measurement='h',
-                    )
-                )
+                ): build_scan_interval_selector()
             }),
         )
 
     @staticmethod
     def async_get_options_flow(config_entry: ConfigEntry) -> EtelecomOptionsFlow:
+        """Return the options flow for this config entry."""
         return EtelecomOptionsFlow(config_entry)
