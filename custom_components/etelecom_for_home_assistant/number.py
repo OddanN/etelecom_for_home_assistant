@@ -19,7 +19,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
 
 class EtelecomScanIntervalNumber(NumberEntity):
-    _attr_name = 'Scan Interval'
+    _attr_translation_key = 'scan_interval'
     _attr_icon = 'mdi:timer-cog-outline'
     _attr_entity_category = EntityCategory.CONFIG
     _attr_has_entity_name = True

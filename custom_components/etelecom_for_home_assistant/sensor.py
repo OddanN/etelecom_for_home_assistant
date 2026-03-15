@@ -12,6 +12,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -64,14 +65,8 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
         icon="mdi:home-map-marker",
     ),
     SensorEntityDescription(
-        key="next_pay_date",
-        translation_key="next_charge_date",
-        device_class=SensorDeviceClass.DATE,
-        icon="mdi:calendar-arrow-right",
-    ),
-    SensorEntityDescription(
         key="charge_sum",
-        translation_key="next_charge_amount",
+        translation_key="next_charge",
         native_unit_of_measurement=RUSSIAN_RUBLE,
         icon="mdi:cash-sync",
     ),
@@ -96,9 +91,10 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
         icon="mdi:wan",
     ),
     SensorEntityDescription(
-        key="payment_history",
-        translation_key="payment_history",
-        icon="mdi:receipt-text-clock-outline",
+        key="last_update",
+        translation_key="last_update",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        icon="mdi:clock-check-outline",
     ),
 )
 
@@ -134,6 +130,8 @@ class EtelecomSensor(CoordinatorEntity[EtelecomDataUpdateCoordinator], SensorEnt
             f"{format_device_slug(entry.data.get(CONF_LOGIN), fallback='etelecom')}_"
             f"{description.translation_key or description.key.replace('.', '_')}"
         )
+        if description.key == "last_update":
+            self._attr_entity_registry_enabled_default = False
 
         account_id = str(
             entry.data.get(CONF_ACCOUNT_ID) or coordinator.data.get(CONF_ACCOUNT_ID) or "unknown"
@@ -159,6 +157,21 @@ class EtelecomSensor(CoordinatorEntity[EtelecomDataUpdateCoordinator], SensorEnt
         return self._description.device_class
 
     @property
+    def entity_category(self) -> EntityCategory | None:
+        """Return the entity category for the sensor."""
+        if self._description.key == "last_update":
+            return EntityCategory.CONFIG
+        if self._description.key in {
+            CONF_ACCOUNT_ID,
+            "name",
+            "address",
+            "network_connect_info.local_ip",
+            "network_connect_info.external_ip",
+        }:
+            return EntityCategory.DIAGNOSTIC
+        return None
+
+    @property
     def native_unit_of_measurement(self) -> str | None:
         """Return the native unit of measurement."""
         return self._description.native_unit_of_measurement
@@ -171,6 +184,9 @@ class EtelecomSensor(CoordinatorEntity[EtelecomDataUpdateCoordinator], SensorEnt
     @property
     def native_value(self) -> Any:
         """Return the current sensor value."""
+        if self._description.key == "last_update":
+            return self.coordinator.last_update_success_time
+
         value = _extract_value(self.coordinator.data, self._description.key)
         if value is None:
             return None
@@ -186,9 +202,6 @@ class EtelecomSensor(CoordinatorEntity[EtelecomDataUpdateCoordinator], SensorEnt
 
         if self._description.key in {"network_connect_info.local_ip", "network_connect_info.external_ip"}:
             return _extract_ip_value(value)
-
-        if self._description.key == "payment_history":
-            return _extract_payment_history_count(value)
 
         if self._description.native_unit_of_measurement == RUSSIAN_RUBLE:
             try:
@@ -208,6 +221,12 @@ class EtelecomSensor(CoordinatorEntity[EtelecomDataUpdateCoordinator], SensorEnt
                 self.coordinator.data.get("create_date"),
             )
 
+        if self._description.key == "balance":
+            payment_attributes = _extract_payment_history_attributes(
+                self.coordinator.data.get("payment_history"),
+            )
+            return payment_attributes or None
+
         if self._description.key == "tariff_speed":
             tariff_name = self.coordinator.data.get("tariff_name")
             return {"name": tariff_name} if tariff_name is not None else None
@@ -215,17 +234,17 @@ class EtelecomSensor(CoordinatorEntity[EtelecomDataUpdateCoordinator], SensorEnt
         if self._description.key == "abonement_current":
             return _format_abonement_attributes(self.coordinator.data.get("abonement_current"))
 
+        if self._description.key == "charge_sum":
+            next_pay_date = self.coordinator.data.get("next_pay_date")
+            if next_pay_date in (None, ""):
+                return None
+            return {"next_charge_date": next_pay_date}
+
         if self._description.key == "network_connect_info.local_ip":
             return _extract_ip_attributes(self.coordinator.data.get("network_connect_info"), external=False)
 
         if self._description.key == "network_connect_info.external_ip":
             return _extract_ip_attributes(self.coordinator.data.get("network_connect_info"), external=True)
-
-        if self._description.key == "payment_history":
-            return _extract_payment_history_attributes(
-                self.coordinator.data.get("payment_history"),
-                self.coordinator.data.get("create_date"),
-            )
 
         return None
 
@@ -334,28 +353,13 @@ def _extract_ip_attributes(value: Any, *, external: bool) -> dict[str, Any] | No
     return dict(ip_entry)
 
 
-def _extract_payment_history_count(value: Any) -> int:
-    """Return the number of payment history records."""
-    if not isinstance(value, dict) or not value.get("success"):
-        return 0
-    history = value.get("history")
-    if not isinstance(history, list):
-        return 0
-    return len(history)
-
-
-def _extract_payment_history_attributes(value: Any, create_date: Any) -> dict[str, Any]:
+def _extract_payment_history_attributes(value: Any) -> dict[str, Any]:
     """Build attributes for the payment history sensor."""
     attributes: dict[str, Any] = {
-        "create_date": create_date,
         "payments_url": PAYMENTS_URL,
     }
     if not isinstance(value, dict):
         return attributes
-
-    attributes["success"] = value.get("success")
-    attributes["date_from"] = _format_unix_datetime(value.get("date_from"))
-    attributes["date_to"] = _format_unix_datetime(value.get("date_to"))
     history = value.get("history")
     if not isinstance(history, list):
         attributes["count"] = 0
@@ -363,9 +367,6 @@ def _extract_payment_history_attributes(value: Any, create_date: Any) -> dict[st
 
     formatted_history = [_format_payment_history_item(item) for item in history if isinstance(item, dict)]
     attributes["count"] = len(formatted_history)
-    if formatted_history:
-        attributes["first_operation_date"] = formatted_history[0].get("date_formatted")
-        attributes["last_operation_date"] = formatted_history[-1].get("date_formatted")
     for index, item in enumerate(reversed(formatted_history[-10:]), start=1):
         attributes[f"operation_{index}"] = _format_payment_history_summary(item)
     return attributes

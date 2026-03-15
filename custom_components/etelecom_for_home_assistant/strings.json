@@ -38,6 +38,16 @@
     }
   },
   "entity": {
+    "button": {
+      "refresh": {
+        "name": "Refresh"
+      }
+    },
+    "number": {
+      "scan_interval": {
+        "name": "Scan Interval"
+      }
+    },
     "sensor": {
       "account_id": {
         "name": "Account ID"
@@ -49,16 +59,13 @@
         "name": "Customer Name"
       },
       "cash_balance": {
-        "name": "Cash Balance"
+        "name": "Money Balance"
       },
       "contract_address": {
         "name": "Contract Address"
       },
-      "next_charge_date": {
-        "name": "Next Charge Date"
-      },
-      "next_charge_amount": {
-        "name": "Next Charge Amount"
+      "next_charge": {
+        "name": "Next Charge"
       },
       "current_tariff": {
         "name": "Current Tariff"
@@ -72,8 +79,8 @@
       "external_ip": {
         "name": "External IP"
       },
-      "payment_history": {
-        "name": "Payments and Charges"
+      "last_update": {
+        "name": "Last Update"
       }
     }
   }
