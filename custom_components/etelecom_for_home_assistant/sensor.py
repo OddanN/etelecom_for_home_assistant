@@ -31,6 +31,8 @@ ACTIVE_UNTIL_PREFIX = (
     "\u0414\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 \u0434\u043e"
 )
 ACTIVE_ABONEMENT_FALLBACK = "\u0414\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442"
+TARIFF_CHANGE_PLANNED = "\u0417\u0430\u043f\u043b\u0430\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u043e"
+TARIFF_CHANGE_NOT_PLANNED = "\u041d\u0435 \u0437\u0430\u043f\u043b\u0430\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u043e"
 MBPS_SUFFIX = "\u041c\u0431\u0438\u0442/\u0441"
 PAYMENTS_URL = "https://my.etelecom.ru/"
 BONUS_URL = "https://my.etelecom.ru/bonus"
@@ -96,6 +98,16 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.TIMESTAMP,
         icon="mdi:clock-check-outline",
     ),
+    SensorEntityDescription(
+        key="tariff_change",
+        translation_key="tariff_change",
+        icon="mdi:swap-horizontal-bold",
+    ),
+    SensorEntityDescription(
+        key="active_services",
+        translation_key="active_services",
+        icon="mdi:format-list-bulleted-square",
+    ),
 )
 
 
@@ -160,13 +172,14 @@ class EtelecomSensor(CoordinatorEntity[EtelecomDataUpdateCoordinator], SensorEnt
     def entity_category(self) -> EntityCategory | None:
         """Return the entity category for the sensor."""
         if self._description.key == "last_update":
-            return EntityCategory.CONFIG
+            return EntityCategory.DIAGNOSTIC
         if self._description.key in {
             CONF_ACCOUNT_ID,
             "name",
             "address",
             "network_connect_info.local_ip",
             "network_connect_info.external_ip",
+            "active_services",
         }:
             return EntityCategory.DIAGNOSTIC
         return None
@@ -200,6 +213,12 @@ class EtelecomSensor(CoordinatorEntity[EtelecomDataUpdateCoordinator], SensorEnt
         if self._description.key == "abonement_current":
             return _format_abonement_state(value)
 
+        if self._description.key == "tariff_change":
+            return _format_tariff_change_state(value, self.coordinator.data)
+
+        if self._description.key == "active_services":
+            return _count_active_services(value)
+
         if self._description.key in {"network_connect_info.local_ip", "network_connect_info.external_ip"}:
             return _extract_ip_value(value)
 
@@ -228,8 +247,10 @@ class EtelecomSensor(CoordinatorEntity[EtelecomDataUpdateCoordinator], SensorEnt
             return payment_attributes or None
 
         if self._description.key == "tariff_speed":
-            tariff_name = self.coordinator.data.get("tariff_name")
-            return {"name": tariff_name} if tariff_name is not None else None
+            return _extract_current_tariff_attributes(
+                self.coordinator.data,
+                self.coordinator.data.get("tariff_data_response"),
+            )
 
         if self._description.key == "abonement_current":
             return _format_abonement_attributes(self.coordinator.data.get("abonement_current"))
@@ -244,7 +265,22 @@ class EtelecomSensor(CoordinatorEntity[EtelecomDataUpdateCoordinator], SensorEnt
             return _extract_ip_attributes(self.coordinator.data.get("network_connect_info"), external=False)
 
         if self._description.key == "network_connect_info.external_ip":
-            return _extract_ip_attributes(self.coordinator.data.get("network_connect_info"), external=True)
+            return _extract_ip_attributes(
+                self.coordinator.data.get("network_connect_info"),
+                external=True,
+                tariff_payload=self.coordinator.data.get("tariff_data_response"),
+            )
+
+        if self._description.key == "tariff_change":
+            return _extract_tariff_change_attributes(
+                self.coordinator.data.get("tariff_data_response"),
+                self.coordinator.data,
+            )
+
+        if self._description.key == "active_services":
+            return _extract_active_services_attributes(
+                self.coordinator.data.get("tariff_data_response"),
+            )
 
         return None
 
@@ -255,6 +291,8 @@ def _extract_value(payload: dict[str, Any], key: str) -> Any:
         return _find_ip_entry(payload.get("network_connect_info"), external=False)
     if key == "network_connect_info.external_ip":
         return _find_ip_entry(payload.get("network_connect_info"), external=True)
+    if key in {"tariff_change", "active_services"}:
+        return payload.get("tariff_data_response")
 
     value: Any = payload
     for part in key.split("."):
@@ -345,12 +383,143 @@ def _extract_ip_value(value: Any) -> str | None:
     return str(ip)
 
 
-def _extract_ip_attributes(value: Any, *, external: bool) -> dict[str, Any] | None:
+def _extract_ip_attributes(
+        value: Any,
+        *,
+        external: bool,
+        tariff_payload: Any = None,
+) -> dict[str, Any] | None:
     """Build IP sensor attributes from the API response."""
     ip_entry = _find_ip_entry(value, external=external)
     if ip_entry is None:
         return None
-    return dict(ip_entry)
+    attributes = dict(ip_entry)
+    if external:
+        external_ip_service = _find_external_ip_service(tariff_payload, ip=str(ip_entry.get("ip") or ""))
+        if external_ip_service is not None:
+            attributes["service_cost"] = external_ip_service.get("service_cost") or external_ip_service.get("cost")
+    return attributes
+
+
+def _extract_current_tariff_attributes(payload: dict[str, Any], tariff_payload: Any) -> dict[str, Any] | None:
+    """Build attributes for the current tariff sensor."""
+    attributes: dict[str, Any] = {}
+    tariff_name = payload.get("tariff_name")
+    if tariff_name is not None:
+        attributes["name"] = tariff_name
+
+    tariff_speed = payload.get("tariff_speed")
+    if tariff_speed is not None:
+        attributes["speed"] = tariff_speed
+
+    if not isinstance(tariff_payload, dict):
+        return attributes or None
+
+    current_tariff = tariff_payload.get("tariff_data")
+    if not isinstance(current_tariff, dict):
+        return attributes or None
+
+    if current_tariff.get("id") is not None:
+        attributes["id"] = current_tariff.get("id")
+    return attributes or None
+
+
+def _format_tariff_change_state(value: Any, payload: dict[str, Any]) -> str:
+    """Return whether a tariff change is planned."""
+    if _get_tariff_change_map(value, payload):
+        return TARIFF_CHANGE_PLANNED
+    return TARIFF_CHANGE_NOT_PLANNED
+
+
+def _extract_tariff_change_attributes(value: Any, payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Build tariff change attributes from tariff-data and current tariff payload."""
+    change_map = _get_tariff_change_map(value, payload)
+    if not change_map:
+        return None
+    return change_map
+
+
+def _get_tariff_change_map(value: Any, payload: dict[str, Any]) -> dict[str, str]:
+    """Build a map of changed tariff fields."""
+    if not isinstance(value, dict):
+        return {}
+
+    current_tariff = value.get("tariff_data")
+    next_tariff = value.get("next_tariff_data")
+    if not isinstance(current_tariff, dict) or not isinstance(next_tariff, dict):
+        return {}
+
+    comparisons = {
+        "id": (
+            str(current_tariff.get("id") or ""),
+            str(next_tariff.get("id") or ""),
+        ),
+        "name": (
+            str(payload.get("tariff_name") or current_tariff.get("name") or ""),
+            str(next_tariff.get("name") or ""),
+        ),
+        "speed": (
+            str(payload.get("tariff_speed") or current_tariff.get("speed") or ""),
+            str(next_tariff.get("speed") or ""),
+        ),
+    }
+
+    changes: dict[str, str] = {}
+    for field, (current_value, new_value) in comparisons.items():
+        if current_value and new_value and current_value != new_value:
+            changes[field] = f'текущий "{current_value}" будет "{new_value}"'
+    return changes
+
+
+def _count_active_services(value: Any) -> int:
+    """Return the number of active services."""
+    return len(_get_active_services(value))
+
+
+def _extract_active_services_attributes(value: Any) -> dict[str, Any] | None:
+    """Build attributes for the active services sensor."""
+    services = _get_active_services(value)
+    attributes: dict[str, Any] = {"count": len(services)}
+    for index, service in enumerate(services, start=1):
+        attributes[f"service_{index}"] = _format_service_summary(service)
+    return attributes
+
+
+def _get_active_services(value: Any) -> list[dict[str, Any]]:
+    """Extract active services from tariff-data payload."""
+    if not isinstance(value, dict) or not value.get("success"):
+        return []
+    services = value.get("services")
+    if not isinstance(services, list):
+        return []
+    return [
+        service
+        for service in services
+        if isinstance(service, dict)
+           and str(service.get("status_mnemonic") or "") == "active"
+           and str(service.get("is_deleted") or "0") != "1"
+    ]
+
+
+def _format_service_summary(service: dict[str, Any]) -> str:
+    """Build a compact summary for a service attribute."""
+    service_name = service.get("service_name") or service.get("class_name") or service.get("id") or "service"
+    service_cost = service.get("service_cost") or service.get("cost")
+    parts = [str(service_name)]
+    if service_cost not in (None, ""):
+        parts.append(f"{service_cost} {RUSSIAN_RUBLE}")
+    return " | ".join(parts)
+
+
+def _find_external_ip_service(value: Any, *, ip: str) -> dict[str, Any] | None:
+    """Find the active external IP service in tariff-data payload."""
+    for service in _get_active_services(value):
+        params = service.get("params")
+        if isinstance(params, dict) and str(params.get("whiteip") or "") == ip:
+            return service
+        if str(service.get("service_name") or "") == "Аренда внешнего IP-адреса":
+            return service
+    return None
 
 
 def _extract_payment_history_attributes(value: Any) -> dict[str, Any]:

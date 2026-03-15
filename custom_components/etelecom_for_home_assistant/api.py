@@ -112,11 +112,41 @@ class EtelecomApiClient:
             self._user_id = str(user_id)
         if payload.get("account_id") is None:
             raise EtelecomResponseError("Account payload did not include account_id")
+        payload["tariff_data_response"] = await self.async_get_tariff_data()
         payload["abonement_current"] = await self.async_get_current_abonement()
         payload["network_connect_info"] = await self.async_get_network_connect_info()
         payload["payment_history"] = await self.async_get_payment_history(payload.get("create_date"))
         payload["homebonus_details"] = await self.async_get_homebonus_details(payload.get("create_date"))
         return payload
+
+    async def async_get_tariff_data(self) -> dict[str, Any]:
+        """Fetch tariff data for the authenticated user."""
+        if not self._user_id or not self._token:
+            await self.async_authenticate()
+
+        try:
+            return await self._async_post(
+                query="tariff-data",
+                payload={
+                    CONF_USER_ID: self._user_id,
+                    CONF_TOKEN: self._token,
+                },
+                request_name="tariff-data",
+                fail_on_unsuccessful=False,
+                content_type="application/x-www-form-urlencoded",
+            )
+        except EtelecomAuthError:
+            await self.async_authenticate()
+            return await self._async_post(
+                query="tariff-data",
+                payload={
+                    CONF_USER_ID: self._user_id,
+                    CONF_TOKEN: self._token,
+                },
+                request_name="tariff-data",
+                fail_on_unsuccessful=False,
+                content_type="application/x-www-form-urlencoded",
+            )
 
     async def async_get_current_abonement(self) -> dict[str, Any]:
         """Fetch the current abonement data for the authenticated user."""

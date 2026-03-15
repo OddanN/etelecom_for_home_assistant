@@ -59,10 +59,22 @@
 
 В репозитории есть готовые blueprint-автоматизации:
 
-- `blueprints/automation/etelecom/low_money_balance_notification.yaml`:
-  уведомление, когда сенсор `Баланс денег` опускается ниже заданного порога.
-- `blueprints/automation/etelecom/next_charge_insufficient_balance_notification.yaml`:
-  уведомление, когда дата следующего списания уже близко, а текущего баланса денег не хватает на предстоящее списание.
+### Уведомление о низком балансе
+
+Автоматизация отправляет уведомление, когда сенсор `Баланс денег` опускается ниже заданного порога.
+
+Файл: `blueprints/automation/etelecom/low_money_balance_notification.yaml`
+
+[![Import blueprint into Home Assistant](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/OddanN/etelecom_for_home_assistant/main/blueprints/automation/etelecom/low_money_balance_notification.yaml)
+
+### Нехватка денег перед следующим списанием
+
+Автоматизация отправляет уведомление, когда дата следующего списания уже близко, а текущего баланса денег не хватает на
+предстоящее списание.
+
+Файл: `blueprints/automation/etelecom/next_charge_insufficient_balance_notification.yaml`
+
+[![Import blueprint into Home Assistant](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/OddanN/etelecom_for_home_assistant/main/blueprints/automation/etelecom/next_charge_insufficient_balance_notification.yaml)
 
 ## Примечания
 

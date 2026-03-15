@@ -81,6 +81,12 @@
       },
       "last_update": {
         "name": "Last Update"
+      },
+      "tariff_change": {
+        "name": "Tariff Change"
+      },
+      "active_services": {
+        "name": "Active Services"
       }
     }
   }
