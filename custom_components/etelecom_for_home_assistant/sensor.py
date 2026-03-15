@@ -20,40 +20,48 @@ from .const import CONF_ACCOUNT_ID, CONF_LOGIN, CONF_USER_ID, DOMAIN
 from .coordinator import EtelecomDataUpdateCoordinator
 from .formatting import format_device_name, format_device_slug
 
-RUSSIAN_RUBLE = "RUB"
+RUSSIAN_RUBLE = "₽"
 
 
 SENSORS: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
         key=CONF_ACCOUNT_ID,
         translation_key="account_id",
+        icon="mdi:card-account-details-outline",
     ),
     SensorEntityDescription(
         key="homebonus.sum",
         translation_key="bonus_balance",
+        native_unit_of_measurement="бонусов",
+        icon="mdi:star-circle-outline",
     ),
     SensorEntityDescription(
         key="name",
         translation_key="customer_name",
+        icon="mdi:account-circle-outline",
     ),
     SensorEntityDescription(
         key="balance",
         translation_key="cash_balance",
-        native_unit_of_measurement=RUSSIAN_RUBLE,
+        native_unit_of_measurement="₽",
+        icon="mdi:wallet-outline",
     ),
     SensorEntityDescription(
         key="address",
         translation_key="contract_address",
+        icon="mdi:home-map-marker",
     ),
     SensorEntityDescription(
         key="next_pay_date",
         translation_key="next_charge_date",
         device_class=SensorDeviceClass.DATE,
+        icon="mdi:calendar-arrow-right",
     ),
     SensorEntityDescription(
         key="charge_sum",
         translation_key="next_charge_amount",
         native_unit_of_measurement=RUSSIAN_RUBLE,
+        icon="mdi:cash-sync",
     ),
 )
 
@@ -117,6 +125,11 @@ class EtelecomSensor(CoordinatorEntity[EtelecomDataUpdateCoordinator], SensorEnt
     def native_unit_of_measurement(self) -> str | None:
         """Return the native unit of measurement."""
         return self._description.native_unit_of_measurement
+
+    @property
+    def icon(self) -> str | None:
+        """Return the entity icon."""
+        return self._description.icon
 
     @property
     def native_value(self) -> Any:
