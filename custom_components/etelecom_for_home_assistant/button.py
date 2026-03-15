@@ -1,4 +1,4 @@
-"""Button platform for the Etelecom integration."""
+"""Version: 1.0.0. Button platform for the Etelecom integration."""
 
 from __future__ import annotations
 

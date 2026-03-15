@@ -1,4 +1,4 @@
-"""Version: 0.0.1. The Etelecom integration."""
+"""Version: 1.0.0. The Etelecom integration."""
 
 from __future__ import annotations
 

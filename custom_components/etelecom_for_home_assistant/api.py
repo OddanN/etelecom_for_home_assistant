@@ -1,4 +1,4 @@
-"""Version: 0.0.1. API client for Etelecom."""
+"""Version: 1.0.0. API client for Etelecom."""
 
 from __future__ import annotations
 

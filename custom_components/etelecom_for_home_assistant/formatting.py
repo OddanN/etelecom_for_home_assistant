@@ -1,4 +1,4 @@
-"""Formatting helpers for the Etelecom integration."""
+"""Version: 1.0.0. Formatting helpers for the Etelecom integration."""
 
 from __future__ import annotations
 

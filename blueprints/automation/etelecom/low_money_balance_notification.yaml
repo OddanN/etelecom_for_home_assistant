@@ -4,6 +4,7 @@ blueprint:
     Отправляет уведомление, когда баланс денег на счете Etelecom опускается ниже
     заданного порога.
   domain: automation
+  source_url: "https://raw.githubusercontent.com/OddanN/etelecom_for_home_assistant/main/blueprints/automation/etelecom/low_money_balance_notification.yaml"
   input:
     balance_entity:
       name: Сенсор баланса денег

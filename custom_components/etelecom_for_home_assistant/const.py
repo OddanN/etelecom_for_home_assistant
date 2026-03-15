@@ -1,4 +1,4 @@
-"""Version: 0.0.1. Constants for the Etelecom integration."""
+"""Version: 1.0.0. Constants for the Etelecom integration."""
 
 DOMAIN = "etelecom_for_home_assistant"
 
