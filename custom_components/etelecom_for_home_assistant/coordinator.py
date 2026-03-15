@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import dt as dt_util
 
 from .api import EtelecomApiClient, EtelecomAuthError
 from .const import CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_HOURS, DOMAIN
@@ -29,6 +30,7 @@ class EtelecomDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Initialize coordinator."""
         self.client = client
         self.entry = entry
+        self.last_successful_update = None
         update_interval = timedelta(
             hours=entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_HOURS)
         )
@@ -51,6 +53,8 @@ class EtelecomDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch account data."""
         try:
-            return await self.client.async_get_user_data()
+            payload = await self.client.async_get_user_data()
         except EtelecomAuthError as err:
             raise ConfigEntryAuthFailed(str(err)) from err
+        self.last_successful_update = dt_util.utcnow()
+        return payload

@@ -32,7 +32,7 @@ ACTIVE_UNTIL_PREFIX = (
 )
 ACTIVE_ABONEMENT_FALLBACK = "\u0414\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442"
 MBPS_SUFFIX = "\u041c\u0431\u0438\u0442/\u0441"
-PAYMENTS_URL = "https://my.etelecom.ru/payments"
+PAYMENTS_URL = "https://my.etelecom.ru/"
 BONUS_URL = "https://my.etelecom.ru/bonus"
 
 
@@ -185,7 +185,7 @@ class EtelecomSensor(CoordinatorEntity[EtelecomDataUpdateCoordinator], SensorEnt
     def native_value(self) -> Any:
         """Return the current sensor value."""
         if self._description.key == "last_update":
-            return self.coordinator.last_update_success_time
+            return self.coordinator.last_successful_update
 
         value = _extract_value(self.coordinator.data, self._description.key)
         if value is None:

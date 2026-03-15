@@ -1,0 +1,50 @@
+blueprint:
+  name: "Etelecom: Уведомление о низком балансе"
+  description: >
+    Отправляет уведомление, когда баланс денег на счете Etelecom опускается ниже
+    заданного порога.
+  domain: automation
+  input:
+    balance_entity:
+      name: Сенсор баланса денег
+      description: Выберите сенсор Etelecom "Баланс денег".
+      selector:
+        entity:
+          filter:
+            - integration: etelecom_for_home_assistant
+              domain: sensor
+    threshold:
+      name: Порог баланса
+      description: Сработать, когда баланс денег станет ниже этого значения.
+      default: 500
+      selector:
+        number:
+          min: -10000
+          max: 10000
+          step: 1
+          mode: box
+          unit_of_measurement: "₽"
+    notify_action:
+      name: Действие уведомления
+      description: Выберите, что должен сделать Home Assistant при срабатывании.
+      selector:
+        action: { }
+
+trigger:
+  - platform: numeric_state
+    entity_id: !input balance_entity
+    below: !input threshold
+
+condition:
+  - condition: template
+    value_template: >
+      {{ trigger.to_state is not none and trigger.to_state.state not in ['unknown', 'unavailable', 'none'] }}
+
+variables:
+  balance_entity: !input balance_entity
+  threshold: !input threshold
+  balance_state: "{{ states(balance_entity) }}"
+  balance_name: "{{ state_attr(balance_entity, 'friendly_name') or balance_entity }}"
+  payments_url: "{{ state_attr(balance_entity, 'payments_url') }}"
+
+action: !input notify_action

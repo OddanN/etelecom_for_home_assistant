@@ -2,70 +2,78 @@
 
 ![GitHub Release](https://img.shields.io/github/v/release/OddanN/etelecom_for_home_assistant?style=flat-square)
 ![GitHub Activity](https://img.shields.io/github/commit-activity/m/OddanN/etelecom_for_home_assistant?style=flat-square)
-![GitHub Downloads](https://img.shields.io/github/downloads/OddanN/etelecom_for_home_assistant/total?style=flat-square)
 ![License](https://img.shields.io/github/license/OddanN/etelecom_for_home_assistant?style=flat-square)
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg?style=flat-square)](https://github.com/hacs/integration)
 
 <p align="center">
-  <img src="logo.png" alt="EIRC SPB logo" width="200">
+  <img src="logo.png" alt="Etelecom logo" width="200">
 </p>
 
-The Etelecom Integration allows you to connect your Home Assistant instance to the Etelecom (AT-HOME / info-lan.ru)
-personal account API and create sensors with the main contract and balance information.
+Интеграция Etelecom (AT-Home) получает данные из личного кабинета [Etelecom](https://my.etelecom.ru/) и создаёт сущности
+с основными данными по договору, балансу, тарифу, бонусам и сети.
 
-## Installation
+## Установка
 
-Installation is easiest via the [Home Assistant Community Store
-(HACS)](https://hacs.xyz/), which is the best place to get third-party
-integrations for Home Assistant. Once you have HACS set up, simply click the button below (requires My Home Assistant
-configured) or
-follow the [instructions for adding a custom
-repository](https://hacs.xyz/docs/faq/custom_repositories) and then
-the integration will be available to install like any other.
+Проще всего установить интеграцию через [Home Assistant Community Store
+(HACS)](https://hacs.xyz/). После настройки HACS нажмите кнопку ниже
+(требуется настроенный My Home Assistant)
+или [добавьте репозиторий вручную как custom repository](https://hacs.xyz/docs/faq/custom_repositories),
+после чего интеграция станет доступна для установки как обычная HACS-интеграция.
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg?style=flat-square)](https://my.home-assistant.io/redirect/hacs_repository/?owner=OddanN&repository=etelecom_for_home_assistant&category=integration)
 
-## Configuration
+## Настройка
 
-After installing, configure the integration using the Integrations UI. No manual YAML configuration is required.
-Go to Settings / Devices & Services and press the Add Integration button, or click the shortcut button below (requires
-My Home Assistant configured).
+После установки настройте интеграцию через интерфейс Home Assistant. YAML-конфигурация не требуется.
+Перейдите в `Настройки` → `Устройства и службы`, нажмите `Добавить интеграцию`
+или воспользуйтесь кнопкой ниже.
 
 [![Add Integration to your Home Assistant instance.](https://my.home-assistant.io/badges/config_flow_start.svg?style=flat-square)](https://my.home-assistant.io/redirect/config_flow_start/?domain=etelecom_for_home_assistant)
 
-### Setup
+### Подключение
 
-- Enter your Etelecom login.
-- Enter your Etelecom password.
-- Finish setup. The integration will authenticate and create entities for the account.
+- Введите логин и пароль от личного кабинета Etelecom
+- Завершите настройку. Интеграция выполнит авторизацию и создаст сущности аккаунта.
 
-### Integration Options
+### Параметры интеграции
 
-- Update Interval: Set the polling interval in hours. Default is 12 hours, minimum is 1 hour, maximum is 24 hours.
+- `Интервал обновления`: период опроса в часах. По умолчанию `12`, минимум `1`, максимум `24`.
 
 ## Entities
 
-The integration creates a device for the personal account and the following sensors:
+На каждую пару логин\пароль интеграция создаёт одно устройство личного кабинета.
+Каждое устройство содержит следующие **основные** сущности:
 
-- Account ID: Contract account number.
-- Bonus Balance: Bonus balance from the loyalty program.
-- Customer Name: Contract owner name.
-- Cash Balance: Monetary balance in RUB.
-- Contract Address: Service address.
-- Next Charge Date: Date of the next planned charge.
-- Next Charge Amount: Planned charge amount in RUB.
+- Общая информация по договору: `Номер счета`, `Контрагент`, `Адрес договора`
+- Сетевые данные: `IP Локальный` и `IP Внешний`
+- `Баланс денег`: денежный баланс лицевого счёта в `₽`. Атрибуты: общее количество денежных операций `count` и последние
+  10
+  операций по счету `operation_1 ... operation_10`.
+- `Баланс бонусов`: бонусный баланс в `б.`. Атрибуты: общее количество бонусных операций `count` и сами операции с
+  бонусным балансом `operation_1 ... operation_N`
+- `Следующее списание`: сумма следующего списания в `₽`. Атрибут: дата следующего списания `next_charge_date`.
+- `Текущий тариф`: текущая скорость тарифа. Атрибут: `name`.
+- `Абонемент`: статус текущего абонемента. Атрибуты включают даты начала и окончания и прочие поля ответа API.
 
-## Notes
+## Blueprints
 
-- This integration requires an active Etelecom account.
-- Data is fetched from `https://api.billing.at-home.ru/app/index.php`.
-- Authentication uses the same login and password as the customer portal.
-- For support or to report issues, open an issue on the
+В репозитории есть готовые blueprint-автоматизации:
+
+- `blueprints/automation/etelecom/low_money_balance_notification.yaml`:
+  уведомление, когда сенсор `Баланс денег` опускается ниже заданного порога.
+- `blueprints/automation/etelecom/next_charge_insufficient_balance_notification.yaml`:
+  уведомление, когда дата следующего списания уже близко, а текущего баланса денег не хватает на предстоящее списание.
+
+## Примечания
+
+- Для работы интеграции нужен действующий аккаунт Etelecom.
+- Для авторизации используются те же логин и пароль, что и в личном кабинете.
+- Если вы нашли ошибку или хотите предложить улучшение, создайте issue в
   [GitHub repository](https://github.com/OddanN/etelecom_for_home_assistant/issues).
 
 ## Debug
 
-For DEBUG add to `configuration.yaml`
+Для включения DEBUG-логов добавьте в `configuration.yaml`:
 
 ```yaml
 logger:
@@ -76,4 +84,4 @@ logger:
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+Проект распространяется по лицензии MIT. Подробности в файле [LICENSE](LICENSE).

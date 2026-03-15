@@ -1,0 +1,82 @@
+blueprint:
+  name: "Etelecom: Нехватка денег перед следующим списанием"
+  description: >
+    Отправляет уведомление, когда до следующего списания остаётся заданное
+    количество дней или меньше, а текущего баланса денег не хватает на сумму
+    предстоящего списания.
+  domain: automation
+  input:
+    money_balance_entity:
+      name: Сенсор баланса денег
+      description: Выберите сенсор Etelecom "Баланс денег".
+      selector:
+        entity:
+          filter:
+            - integration: etelecom_for_home_assistant
+              domain: sensor
+    next_charge_entity:
+      name: Сенсор следующего списания
+      description: Выберите сенсор Etelecom "Следующее списание".
+      selector:
+        entity:
+          filter:
+            - integration: etelecom_for_home_assistant
+              domain: sensor
+    days_before:
+      name: Дней до списания
+      description: Сработать, когда до следующего списания остаётся не больше этого количества дней.
+      default: 3
+      selector:
+        number:
+          min: 0
+          max: 30
+          step: 1
+          mode: box
+          unit_of_measurement: "д."
+    notify_action:
+      name: Действие уведомления
+      description: Выберите, что должен сделать Home Assistant при выполнении условий.
+      selector:
+        action: { }
+
+trigger:
+  - platform: state
+    entity_id: !input money_balance_entity
+  - platform: state
+    entity_id: !input next_charge_entity
+
+variables:
+  money_balance_entity: !input money_balance_entity
+  next_charge_entity: !input next_charge_entity
+  days_before: !input days_before
+  money_balance: "{{ states(money_balance_entity) | float(0) }}"
+  next_charge: "{{ states(next_charge_entity) | float(0) }}"
+  next_charge_date_raw: "{{ state_attr(next_charge_entity, 'next_charge_date') }}"
+  next_charge_date: >
+    {% if next_charge_date_raw not in [none, '', 'unknown', 'unavailable'] %}
+      {{ as_datetime(next_charge_date_raw) }}
+    {% else %}
+      {{ none }}
+    {% endif %}
+  days_until_charge: >
+    {% if next_charge_date is not none %}
+      {{ (as_local(next_charge_date).date() - now().date()).days }}
+    {% else %}
+      {{ none }}
+    {% endif %}
+  payments_url: "{{ state_attr(money_balance_entity, 'payments_url') }}"
+
+condition:
+  - condition: template
+    value_template: >
+      {{
+        states(money_balance_entity) not in ['unknown', 'unavailable', 'none']
+        and states(next_charge_entity) not in ['unknown', 'unavailable', 'none']
+        and next_charge_date is not none
+        and days_until_charge is not none
+        and days_until_charge >= 0
+        and days_until_charge <= (days_before | int(0))
+        and next_charge > money_balance
+      }}
+
+action: !input notify_action
