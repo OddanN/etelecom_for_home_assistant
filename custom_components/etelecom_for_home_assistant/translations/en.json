@@ -59,6 +59,21 @@
       },
       "next_charge_amount": {
         "name": "Next Charge Amount"
+      },
+      "current_tariff": {
+        "name": "Current Tariff"
+      },
+      "abonement": {
+        "name": "Abonement"
+      },
+      "local_ip": {
+        "name": "Local IP"
+      },
+      "external_ip": {
+        "name": "External IP"
+      },
+      "payment_history": {
+        "name": "Payments and Charges"
       }
     }
   }
