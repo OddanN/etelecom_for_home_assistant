@@ -5,6 +5,7 @@ from __future__ import annotations
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 
 from .api import EtelecomApiClient, EtelecomAuthError
@@ -15,6 +16,7 @@ from .formatting import format_account_title, format_device_name
 type EtelecomConfigEntry = ConfigEntry[EtelecomApiClient]
 
 PLATFORMS = ["sensor", "number", "button"]
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)  # pylint: disable=invalid-name
 
 
 async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
