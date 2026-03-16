@@ -1,10 +1,10 @@
 {
   "domain": "etelecom_for_home_assistant",
   "name": "Etelecom for Home Assistant",
-  "config_flow": true,
   "codeowners": [
     "@OddanN"
   ],
+  "config_flow": true,
   "documentation": "https://github.com/OddanN/etelecom_for_home_assistant",
   "integration_type": "service",
   "iot_class": "cloud_polling",
