@@ -6,8 +6,8 @@
     "@OddanN"
   ],
   "documentation": "https://github.com/OddanN/etelecom_for_home_assistant",
-  "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/OddanN/etelecom_for_home_assistant/issues",
+  "iot_class": "cloud_polling",
   "requirements": [],
   "version": "1.0.0"
 }
