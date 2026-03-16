@@ -6,8 +6,5 @@
   "domains": [
     "etelecom_for_home_assistant"
   ],
-  "documentation": "https://github.com/OddanN/etelecom_for_home_assistant",
-  "authors": [
-    "OddanN"
-  ]
+  "documentation": "https://github.com/OddanN/etelecom_for_home_assistant"
 }

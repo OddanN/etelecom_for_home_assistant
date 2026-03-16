@@ -8,7 +8,7 @@
 <!--suppress HtmlDeprecatedAttribute -->
 <p align="center">
   <!--suppress CheckImageSize -->
-<img src="logo.png" alt="Etelecom logo" width="200">
+<img src="custom_components/etelecom_for_home_assistant/brand/icon.png" alt="Etelecom logo" width="200">
 </p>
 
 Интеграция Etelecom (AT-Home) получает данные из личного кабинета [Etelecom](https://my.etelecom.ru/) и создаёт сущности
