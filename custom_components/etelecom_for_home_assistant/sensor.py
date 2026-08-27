@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -37,6 +37,7 @@ TARIFF_CHANGE_NOT_PLANNED = (
 MBPS_SUFFIX = "\u041c\u0431\u0438\u0442/\u0441"
 PAYMENTS_URL = "https://my.etelecom.ru/"
 BONUS_URL = "https://my.etelecom.ru/bonus"
+CURRENCY_PRECISION = Decimal("0.01")
 
 
 SENSORS: tuple[SensorEntityDescription, ...] = (
@@ -305,7 +306,7 @@ def _build_active_services_attributes(payload: dict[str, Any]) -> dict[str, Any]
 def _to_decimal(value: Any) -> Decimal | None:
     """Convert a value to decimal for currency sensors."""
     try:
-        return Decimal(str(value))
+        return Decimal(str(value)).quantize(CURRENCY_PRECISION, rounding=ROUND_HALF_UP)
     except (InvalidOperation, ValueError):
         return None
 
