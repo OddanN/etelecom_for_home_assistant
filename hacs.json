@@ -2,5 +2,7 @@
   "name": "Etelecom for Home Assistant",
   "country": "RU",
   "homeassistant": "2025.1.0",
-  "render_readme": true
+  "render_readme": true,
+  "zip_release": true,
+  "filename": "etelecom_for_home_assistant.zip"
 }
